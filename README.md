@@ -1,22 +1,11 @@
 # GitHub Action for Deploying via `rsync` Over `ssh`
 
-[![Actions Status](https://wdp9fww0r9.execute-api.us-west-2.amazonaws.com/production/badge/maxheld83/rsync)](https://github.com/maxheld83/rsync/actions)
-[![GitHubActions](https://img.shields.io/badge/as%20seen%20on%20-GitHubActions-blue.svg)](https://github-actions.netlify.com/rsync)
-[![View Action](https://img.shields.io/badge/view-action-blue.svg)](https://github.com/marketplace/actions/rsync-deploy)
-
-Sometimes, you might want to use `rsync` inside GitHub actions, such as for deploying static assets to some old school webserver over ssh.
-This is your action.
-
-It allows you to transfer files *from* your working directory (`/github/workspace`) *to* some server using `rsync` over `ssh`.
-Helpfully, `/github/workspace` includes a copy of your repository *source*, as well as any build artefacts left behind by previous workflow steps (= other actions you ran before).
-
-
 ## Disclaimer
 
 GitHub actions is still [in limited public beta](https://github.com/features/actions) and advises against [usage in production](https://developer.github.com/actions/).
 
 This action requires ssh private keys (see secrets), and **may thus be vulnerable**.
-The ssh authentification **may need improvement** (see [issues](https://github.com/maxheld83/rsync/)).
+The ssh authentification **may need improvement** (see [issues](https://github.com/bvelastegui/rsync/issues)).
 
 
 ## Secrets
@@ -42,39 +31,53 @@ This is to make sure that the action is talking to a trusted server.
 - `HOST_IP` (the IP of the server you wish to deploy to, such as `111.111.11.111`)
 - `HOST_FINGERPRINT` (the fingerprint of the server you wish to deploy to, can have different formats)
 
-The `HOST_NAME` is *also* used in the below required arguments.
-
 
 ## Required Arguments
 
-`rsync` requires:
+`rsync` requires `[ARGS FOLDER HOST_USERNAME@HOST_NAME:HOST_DESTINATION`:
 
-- `SRC`: source directory, relative path *from* `/github/workspace`
-- `[USER@]HOST::DEST`: target user (optional), target server, and directory from root *on* that target server. 
-  Remember you can reuse the environment variable `$HOST_NAME`.
+- `ARGS` (arguments for *rsync*, such as `"-avzr --delete"`)
+- `FOLDER` (the folder to sync, such as `"dist/"`)
+- `HOST_USERNAME` (the username of the server you wish to deploy to)
+- `HOST_DESTINATION` (the destination of the server you wish to deploy to, such as `"/home/user/nodeapp"`)
 
 For action `rsync` options, see `entrypoint.sh` in the source.
 For more options and documentation on `rsync`, see [https://rsync.samba.org](https://rsync.samba.org).
 
-
 ## Example Usage
 
-```
-action "Deploy with rsync" {
-  uses = "maxheld83/rsync@v0.1.1"
-  needs = "Write sha"
-  secrets = [
-    "SSH_PRIVATE_KEY",
-    "SSH_PUBLIC_KEY"
-  ]
-  env = {
-    HOST_NAME = "foo.example.com"
-    HOST_IP = "111.111.11.111"
-    HOST_FINGERPRINT = "ecdsa-sha2-nistp256 AAAA..."
-  }
-  args = [
-    "$GITHUB_WORKSPACE/index.html",
-    "alice@$HOST_NAME:path/to/destination"
-  ]
-}
+```yaml
+name: Node CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Node.js 10.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 10.x
+    - name: Install npm dependencies and build for deployment
+      run: |
+        npm install
+        npm build
+      env:
+        NODE_ENV: production
+    - name: Deploy to Server
+      uses: bvelastegui/rsync
+      env:
+        HOST_NAME: ${{ secrets.HOST_NAME }}
+        HOST_IP: ${{ secrets.HOST_IP }}
+        HOST_FINGERPRINT: ${{ secrets.HOST_FINGERPRINT }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+        HOST_USERNAME: ${{ secrets.HOST_USERNAME }}
+        HOST_DESTINATION: ${{ secrets.HOST_DESTINATION }}
+        FOLDER: ""
+        ARGS: "-avzr --delete"
 ```

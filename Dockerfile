@@ -1,19 +1,18 @@
-FROM debian:stable-20190122-slim
+FROM alpine:edge
 
-LABEL "maintainer"="Maximilian Held <info@maxheld.de>"
-LABEL "repository"="http://github.com/maxheld83/rsync"
-LABEL "homepage"="https://www.maxheld.de/rsync/"
+LABEL "maintainer"="Bryan Velastegui <bryanslvr@gmail.com>"
+LABEL "repository"="http://github.com/bvelastegui/rsync"
+LABEL "homepage"="https://github.com/bvelastegui/rsync"
 
 LABEL "com.github.actions.name"="Rsync Deploy"
 LABEL "com.github.actions.description"="Deploy to a remote server with rsync via ssh."
 LABEL "com.github.actions.icon"="upload-cloud"
 LABEL "com.github.actions.color"="orange"
 
-RUN apt-get update && \ 
-apt-get install -y \ 
-openssh-client \ 
-rsync && \ 
-rm -rf /var/lib/apt/lists/*
+RUN apk upgrade --update-cache --available && \
+    apk add openssl rsync && \
+    rm -rf /var/cache/apk/*
 
 ADD entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
